@@ -14,8 +14,8 @@ function list (req, res) {
    * 15美食家、16古今通、17学霸族、18星座控、19体育迷
    *
    */
-  let type = req.query.type || '0';
-  let page = req.query.page || '0';
+  let type = req.query.type || 0;
+  let page = req.query.page || 0;
   let url = `http://weixin.sogou.com/wapindex/wap/0612/wap_${type}/${page}.html`;
   let options = {
     url: url,
