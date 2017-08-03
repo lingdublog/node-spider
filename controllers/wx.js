@@ -48,11 +48,14 @@ function list (req, res) {
       let list = [];
       for (let i=0;i<len;i++) {
         let oArticle = aArticle.eq(i);
+        let _pic = aPic.eq(i).find('img').attr('src');
+        let pic = getUrlParams(decodeURIComponent(_pic), 'url').replace(/\?.+/, '');
         let _obj = {
+          title: oArticle.find('a div').text(),
           url: oArticle.find('a').attr('href'),
           author: oArticle.find('.s2').text(),
           timestamp: oArticle.find('.s3').data('lastmodified'),
-          pic: aPic.eq(i).find('img').attr('src')
+          pic: pic
         };
         list.push(_obj);
       }
@@ -71,8 +74,11 @@ function list (req, res) {
     })
   }
 
+}
 
-
+function getUrlParams (url, param) {
+  let temp = url.split(param + '=')[1];
+  return temp;
 }
 
 module.exports = wx;
