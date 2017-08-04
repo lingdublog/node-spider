@@ -8,5 +8,6 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/list', wxController.list);
+router.get('/detail', wxController.detail);
 
 module.exports = router;

@@ -2,8 +2,11 @@ const iconv = require('iconv-lite');
 const request = require('request');
 const cheerio = require("cheerio");
 
+const IMG_PREFIX = 'http://read.html5.qq.com/image?src=forum&q=5&r=0&imgflag=7&imageUrl=';
+
 const wx = {
-  list: list
+  list: list,
+  detail: detail
 };
 
 function list (req, res) {
@@ -55,7 +58,7 @@ function list (req, res) {
           url: oArticle.find('a').attr('href'),
           author: oArticle.find('.s2').text(),
           timestamp: oArticle.find('.s3').data('lastmodified'),
-          pic: pic
+          pic: IMG_PREFIX + pic
         };
         list.push(_obj);
       }
@@ -77,8 +80,81 @@ function list (req, res) {
 }
 
 function getUrlParams (url, param) {
-  let temp = url.split(param + '=')[1];
-  return temp;
+  let _temp = url.split(param + '=')[1];
+  return _temp.split('&')[0];
+}
+
+function trim (str) {
+  return str && str.replace(/(^\s*)|(\s*$)/g, '');
+}
+
+
+function detail (req, res) {
+  let url = req.query.url;
+  let options = {
+    url: url,
+    encoding: null,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1'
+    }
+  };
+
+  try {
+    request(options, function (err, _res, body) {
+      //先抓取页面，获取页面编码格式，然后再使用相应编码解析
+      let html = iconv.decode(body,'UTF8'); // gb2312;
+      try{
+        let str = html.split('charset=')[1];
+        let encode = str.match(/(\w+)\W/)[1].toUpperCase();
+        if (encode==='UTF') {
+          html = iconv.decode(body,'UTF8');
+        }else{
+          html = iconv.decode(body,encode);
+        }
+      }catch(e){
+        console.log('no charset');
+      }
+      //获取页面为元素
+      let $ = cheerio.load(html,{decodeEntities: false});
+      /*let iframes = $('iframe');
+      let len = iframes.length;
+      iframes.each((i, v) => {
+        console.log ($(v).data('src'))
+      });*/
+      let content = trim($('#js_content').html());
+      let iframes = content.match(/preview.html\?vid=(.+?)&width=.+?&auto=0/g);
+      if (!!iframes) {
+        for (let i=0;i<iframes.length;i++) {
+          let vid = getUrlParams(iframes[i], 'vid');
+          console.log (vid)
+          content = content.replace(iframes[i], 'player.html?vid=' + vid);
+        }
+      }
+
+      let data = {
+        title: trim($('.rich_media_title').text()),
+        author: trim($('#post-user').text()),
+        time: trim($('#post-date').text()),
+        content: content
+          .replace(/data-src="http:\/\/mmbiz.qpic.cn/g, `width="100%" src="${IMG_PREFIX}http://mmbiz.qpic.cn`)
+          .replace(/data-src/g, 'src')
+          // .replace(/!important/g, '')
+          // .replace(/<iframe.+<\/iframe>/g, 'player.html?vid=')
+      };
+      res.json ({
+        code: 10000,
+        errMsg: '',
+        data: data
+      })
+
+    });
+  }catch(e){
+    res.json ({
+      code: 102,
+      errMsg: '请求错误'
+    })
+  }
+
 }
 
 module.exports = wx;
